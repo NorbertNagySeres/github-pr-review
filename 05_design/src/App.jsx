@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Eye, Edit, Trash2, Search, Plus, X } from 'lucide-react'
+import { useCart } from './hooks/useCart.js'
+import { CartWidget } from './components/CartWidget.jsx'
 
 const API_BASE_URL = 'http://localhost:8000'
 
@@ -421,9 +423,22 @@ function DeleteProductDialog({ isOpen, onClose, onConfirm, product, isDeleting }
 }
 
 function ProductCard({ product, onDelete, onView, onEdit }) {
+  const { addToCart, canAddToCart, getProductQuantityInCart, loading } = useCart()
+  
   const handleDelete = () => {
     onDelete(product)
   }
+  
+  const handleAddToCart = () => {
+    if (canAddToCart(product)) {
+      addToCart(product)
+    }
+  }
+  
+  // Use backend's available_stock if available, otherwise fallback to stock
+  const availableStock = product.available_stock !== undefined ? product.available_stock : product.stock
+  const cartQuantity = getProductQuantityInCart(product.id)
+  const canAdd = canAddToCart(product) && !loading
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4 h-full flex flex-col min-h-[200px]">
@@ -438,7 +453,12 @@ function ProductCard({ product, onDelete, onView, onEdit }) {
         
         <div className="flex justify-between items-center">
           <span className="text-sm font-medium text-black">${product.price}</span>
-          <span className="text-xs text-gray-500">Stock: {product.stock}</span>
+          <div className="text-xs text-gray-500">
+            <div>Stock: {availableStock}</div>
+            {cartQuantity > 0 && (
+              <div className="text-blue-600">In cart: {cartQuantity}</div>
+            )}
+          </div>
         </div>
       </div>
       
@@ -456,6 +476,14 @@ function ProductCard({ product, onDelete, onView, onEdit }) {
         >
           <Edit size={12} />
           Edit
+        </button>
+        <button 
+          onClick={handleAddToCart}
+          disabled={!canAdd}
+          className="inline-flex items-center justify-center w-8 h-8 bg-green-600 rounded text-white hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+          title={canAdd ? 'Add to cart' : 'Out of stock'}
+        >
+          <Plus size={12} />
         </button>
         <button 
           onClick={handleDelete}
@@ -666,6 +694,8 @@ function App() {
         product={selectedProduct}
         isDeleting={isDeleting}
       />
+      
+      <CartWidget />
     </div>
   )
 }
